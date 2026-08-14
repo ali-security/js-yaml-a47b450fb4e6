@@ -28,6 +28,12 @@ jobs:
 
     - run: npm install
 
+    # `files` ships the committed dist/ bundles, and `module` / `exports.import`
+    # / `unpkg` / `jsdelivr` all resolve to them, so they have to carry the same
+    # fixes as lib/. Rebuild them from source before testing so the dist/ guard
+    # in test/units/ checks the bundles this run would actually publish.
+    - run: npm run browserify
+
     - run: npm test
 
   package:
@@ -50,9 +56,13 @@ jobs:
 
     - run: npm install
 
-    # dist/ is committed and git-tracked at the release tag and `files` ships it
-    # as-is, so a bare pack reproduces the published tgz; rebuilding it here would
-    # only add rollup-version drift.
+    # dist/ is committed and git-tracked at the release tag, and `files` ships it
+    # as-is. Packing the committed bundles would therefore ship the *unpatched*
+    # parser to every `import 'js-yaml'` and unpkg/jsDelivr consumer, so rebuild
+    # them from the patched source first. The npm registry time machine pinned
+    # above keeps rollup at the release-time version, so this adds no bundler drift.
+    - run: npm run browserify
+
     - run: npm pack --ignore-scripts
 
     - uses: actions/upload-artifact@v4
